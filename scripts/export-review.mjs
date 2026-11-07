@@ -1,0 +1,21 @@
+// Static, non-operational review copy. Never exports runtime databases or credentials.
+import {readFileSync,writeFileSync,mkdirSync,cpSync,rmSync} from 'node:fs';
+import {resolve,dirname} from 'node:path';import {fileURLToPath} from 'node:url';
+import {renderPublicPage,escape} from '../public/assets/app.js';
+const source=resolve(dirname(fileURLToPath(import.meta.url)),'..'),output=resolve(process.argv[2]||'review-output'),dist=output+'/dist';
+const site=JSON.parse(readFileSync(source+'/content/site.json'));site.bookingAvailable=false;site.clientPortalAvailable=false;site.settings.bookingEnabled=false;site.revision=1;
+mkdirSync(dist+'/assets',{recursive:true});cpSync(source+'/public/assets',dist+'/assets',{recursive:true});
+let app=readFileSync(dist+'/assets/app.js','utf8').replace("if(date)date.addEventListener('change'","if(date&&f.dataset.available==='true')date.addEventListener('change'");writeFileSync(dist+'/assets/app.js',app);
+const json=value=>JSON.stringify(value).replace(/</g,'\\u003c');
+const notice='<aside class="notice">Forhåndsvisning. Skjemaer er stengt. <a href="/kontrollpanel-demo">Prøv eierkontrollpanelet med demodata</a>. Klienter trenger ingen konto; oppfølging skjer på e-post.</aside>';
+for(const path of ['/',...Object.keys(site.pages).filter(x=>x!=='home').map(x=>'/'+x),'/personvern']){
+ const r=renderPublicPage(site,path,false);let html=readFileSync(source+'/public/index.html','utf8').replace(/<title>[\s\S]*?<\/title>/,()=>`<title>${escape(r.title)}</title>`).replace('<header id="header"></header>',()=>notice+`<header id="header">${r.header}</header>`).replace(/<main id="main">[\s\S]*?<\/main>/,()=>`<main id="main">${r.main}</main>`).replace('<footer id="footer"></footer>',()=>`<footer id="footer">${r.footer}</footer>`).replace('</head>','<meta name="robots" content="noindex,nofollow"></head>').replace('</body>',()=>`<script id="site-data" type="application/json">${json({site,signedIn:false})}</script></body>`);
+ const dir=dist+(path==='/'?'':path);mkdirSync(dir,{recursive:true});writeFileSync(dir+'/index.html',html);
+}
+const now=new Date(),created=now.toISOString(),day=new Date(now.valueOf()+60*86400000).toISOString().slice(0,10);
+const record={id:'demo-enquiry-001',created,updated:created,status:'Ny',payload:{name:'Testkontakt – demodata',organisation:'Testarrangør – demodata',organisationType:'Skole',type:'booking',email:'demo@example.invalid',phone:'',topic:'Autisme og nevrodiversitet',format:'Foredrag',audience:'Foresatte (demo)',date:day,time:'18:00',location:'Teststed – demodata',message:'DEMO: Vi ønsker et foredrag for foresatte. Kan vi sette av tid til spørsmål?'},notes:'Kun fiktive testdata. Dette er ikke en ekte booking.',quote:null,version:1,messages:[]};
+const statuses=['Ny','Under behandling','Tilbud sendt','Bekreftet','Gjennomført','Avslått','Avlyst','Arkivert'];const seed={site,records:{enquiries:[record],blocks:[],statuses}};
+let admin=readFileSync(source+'/public/admin.html','utf8').replace('<body>','<body><aside class="notice"><strong>DEMO MED FIKTIVE TESTDATA.</strong> Prøv faner, innholdsredigering, kalender og e-poststatus. Endringer gjelder bare denne åpne siden og forsvinner ved oppdatering. Ingen meldinger sendes til ekte klienter. <a href="/">Til nettsiden</a>.</aside>').replace('</body>',()=>`<script id="dashboard-demo-data" type="application/json">${json(seed)}</script></body>`).replace('<title>Mitt kontrollpanel','<title>Demo – Mitt kontrollpanel');mkdirSync(dist+'/kontrollpanel-demo',{recursive:true});writeFileSync(dist+'/kontrollpanel-demo/index.html',admin);
+rmSync(dist+'/foresporsel-demo',{recursive:true,force:true});
+writeFileSync(dist+'/robots.txt','User-agent: *\nDisallow: /\n');writeFileSync(output+'/README.md','# Isaac William review copy\n\nStatic owner review of taylorcolonwrites/isaacwilliam-foredrag. Public submission is disabled. The owner dashboard demo uses fictional test records and browser-memory changes only. Clients need no accounts or private links; follow-up is by email. Google Workspace sending is prepared but not authorised or enabled. Real auth, enquiries and content are handled by the Node/SQLite application after server deployment. No customer database or credentials are included. No DNS or email changes.\n');
+console.log('Review copy exported to '+dist);

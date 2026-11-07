@@ -1,0 +1,19 @@
+{
+  "name": "isaacwilliam-foredrag",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env server/index.mjs",
+    "dev": "node --env-file-if-exists=.env server/index.mjs",
+    "test": "node --test test/*.test.mjs",
+    "check": "node --check server/index.mjs && node --check server/email.mjs && node --check public/assets/app.js && node --check public/assets/admin.js && node --check public/assets/overview.js && node --check server/visual-qa.mjs && node --check public/assets/enquiry.js && node --check public/assets/admin-demo.js && node --check scripts/export-review.mjs && node --check scripts/staging-check.mjs && node --check scripts/container-smoke.mjs",
+    "staging:check": "node scripts/staging-check.mjs"
+  },
+  "dependencies": {
+    "nodemailer": "10.3.1"
+  }
+}
